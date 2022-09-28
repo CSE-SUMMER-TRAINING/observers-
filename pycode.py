@@ -24,7 +24,7 @@ class Task(object):
                 self.year = y
 
     def print_info (self):
-            print(arabic(f' {self.type} ، التكليف: {self.building} ، المينى:  {self.day} اليوم رقم : '))
+            print(arabic(f'اليوم رقم : {self.day} ، التكليف: {self.type} ، المينى:  {self.building}'))
 
     def task_place(self):
             return mp[self.building]
@@ -49,10 +49,10 @@ class Monitor:
     def print_info(self):
         print()
         print(arabic("بيانات المكلف"))
-        print(arabic( f"{self.user_name.capitalize()} الاسم:"))
-        print(arabic(f'{self.title} المسمى الوظيفى:'))
-        print(arabic(f'{self.work_place} مكان العمل:'))
-        print(arabic(f'{self.branch} المبنى: '))
+        print(arabic( f"الاسم : {self.user_name.capitalize()} "))
+        print(arabic(f' المسمى الوظيفى: {self.title}'))
+        print(arabic(f'مكان العمل: {self.work_place} '))
+        print(arabic(f'المبنى: {self.branch} '))
         print()
         print(arabic("التكليفات: "))
 
