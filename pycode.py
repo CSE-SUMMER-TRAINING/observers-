@@ -1,3 +1,4 @@
+from multiprocessing.dummy import Manager
 from re import S
 from operator import indexOf
 from sre_compile import isstring
@@ -5,18 +6,23 @@ import string
 from xmlrpc.client import DateTime
 import pandas as pd
 import arabic_reshaper
-from bidi.algorithm import get_display
-import xlrd     
+# from bidi.algorithm import get_display
+# import xlrd     
 import openpyxl
 # from asyncio import taskgroups
-khalafawy=arabic_reshaper.reshape("خلفاوي")[::-1]
-road_el_farag=arabic_reshaper.reshape("روض الفرج")[::-1]
-professor=arabic_reshaper.reshape("ا.د")[::-1]
-Adoctor=arabic_reshaper.reshape("ا.م")[::-1]
-doctor=arabic_reshaper.reshape("دكتور")[::-1]
+def arabic(str):
+    return arabic_reshaper.reshape(str)[::-1]
+khalafawy=arabic("خلفاوي")
+road_el_farag=arabic("روض الفرج")
+professor=arabic("ا.د")
+Adoctor=arabic("ا.م")
+doctor=arabic("دكتور")
+manager =  arabic("رئيس لجنة")
+observer = arabic("ملاحظ")
+monitor0= arabic("مراقب دور")
 mp = {"professor":0,professor:0,Adoctor:1,doctor:2,"Adoctor":1,"doctor":2,"other":3,"road el farag":1 ,"khalafawy":0,road_el_farag:1,khalafawy:0}
 class Task(object):
-    def __init__(self,day = 0,building = 0,type = "observer"):
+    def __init__(self,day = 0,building = 0,type = observer):
             self.day = day
             self.building = building
             self.type = type
@@ -27,7 +33,7 @@ class Task(object):
                 self.year = y
 
     def print_info (self):
-            print(f'-exam day {self.day} at {self.building} as {self.type}')
+            print(f' {self.type} {arabic("، التكليف: ")} {self.building} {arabic("، المينى: ")} {self.day} {arabic("اليوم رقم : ")}')
 
     def task_place(self):
             return mp[self.building]
@@ -47,13 +53,13 @@ class Monitor:
 
     def print_info(self):
         print()
-        print("Monitor info: ")
-        print(f'- UserName:{self.user_name.capitalize()}')
-        print(f'- Job_title:{self.title}')
-        print(f'- work_place:{self.work_place}')
-        print(f'- branch:{self.branch}')
+        print(arabic("بيانات المكلف"))
+        print(f'{self.user_name.capitalize()} {arabic("الاسم: ")}')
+        print(f'{self.title} {arabic("المسمى الوظيفى: ")}')
+        print(f'{self.work_place} {arabic("مكان العمل: ")}')
+        print(f'{self.branch} {arabic("المبنى: ")}')
         print()
-        print("Monitor Tasks:")
+        print(arabic("التكليفات: "))
 
         for task in self.task:
             task.print_info()
@@ -90,18 +96,6 @@ class Day:
 
 	def work_place(self):
 		return self.building
-
-
-    # def append_task(self,new_task):
-    #   new_task.select_day(self.d,self.m,self.y)
-    #   self.task.append(new_task)
-
-    # def current_day(self):
-	# 	return (self.d,self.m,self.y)
-
-
-def flip_place(cur):
-	return "road el farag" if cur == "khalafawy" else "khalafawy"
 
 def process_single_task(day,tsk,monitors,lst):
 
@@ -152,16 +146,13 @@ def process(monitors,days):
             employees[i][j][0] = [0,len(employees[i][j][1])]
 
     done , ok = 1 , 0
-    # s=[0]
     for day in days:
         for i in range(1,day.observers()+1):
-            tsk = Task(day.current_day(),day.work_place(),"observer")
-            # print(tsk.task_place())
+            tsk = Task(day.current_day(),day.work_place(),observer)
             ok = process_single_task(day, tsk, 
             employees[tsk.task_place()][3][1], 
             employees[tsk.task_place()][3][0])
             if ok:continue
-            # print(tsk.task_place())
             ok = process_single_task(day, tsk, 
             employees[(tsk.task_place()+1)%2][3][1], 
             employees[(tsk.task_place()+1)%2][3][0])
@@ -170,7 +161,7 @@ def process(monitors,days):
 
         for i in range(1,day.monitor()+1):
 
-            tsk = Task(day.current_day(),day.work_place(),"monitor");
+            tsk = Task(day.current_day(),day.work_place(),monitor0)
             
             ok = process_single_task(day, tsk, 
             employees[tsk.task_place()][2][1], 
@@ -188,7 +179,7 @@ def process(monitors,days):
 
         for i in range(1,day.Manager()+1):
 
-            tsk = Task(day.current_day(),day.work_place(),"manager")
+            tsk = Task(day.current_day(),day.work_place(),manager)
             employees[tsk.task_place()][0]
             ok = process_single_task(day, tsk, 
             employees[tsk.task_place()][0][1], 
@@ -214,20 +205,9 @@ def process(monitors,days):
 
 monitors , days = [],[]
 
-# # monitors input
-# monitors.append(Monitor("ahmed", "doctor", "control", "road el farag", 5))
-# monitors.append(Monitor("mohamed", "other", "control", "khalafawy", 3))
-# monitors.append(Monitor("ali", "other", "control", "khalafawy", 1))
-# monitors.append(Monitor("amr", "other", "control", "khalafawy", 7))
-# monitors.append(Monitor("sameh", "other", "control", "road el farag", 2))
-# monitors.append(Monitor("shady", "doctor", "control", "khalafawy", 3))
-# monitors.append(Monitor("salem", "professor", "control", "road el farag", 3))
-# monitors.append(Monitor("said", "professor", "control", "khalafawy", 3))
-
 dataframe1 = pd.read_excel('arb.xlsx', na_values = "E",sheet_name='Sheet1')
 lst=[]
 for index, rows in dataframe1.iterrows():
-    # Create list for the current row
     my_list =rows.values.tolist()
     if(not isstring(my_list[0])):continue
     if( not (my_list[0][0]>='A' and my_list[0][0]<='z')):
@@ -238,17 +218,13 @@ for index, rows in dataframe1.iterrows():
         my_list[2]= arabic_reshaper.reshape(my_list[2])[::-1]
     if( not(my_list[3][0]>='A' and my_list[3][0]<='z')):
         my_list[3]= arabic_reshaper.reshape(my_list[3])[::-1]
-    # #append the list to the final list
     lst.append(my_list)
-# Print the list
 for x in lst:
     monitors.append(Monitor(*x))
-# [[],[]]
-# days input
 # Day(day number , number of observres , number of monitors,number of managers) needed for that day in total
 
 day1 = Day(1,2,1,1,khalafawy)
-day2 = Day(2,5,1,1,road_el_farag)
+day2 = Day(2,55,1,1,road_el_farag)
 day3 = Day(3,4,1,1,khalafawy)
 
 days.append(day1)
@@ -259,7 +235,7 @@ days.append(day3)
 ok = process(monitors, days)
 
 if not ok :
-	print("Monitors are not enough\n")
+	print(arabic("عدد الموظفين غير كافى"))
 
 else:
 	for mon in monitors:
