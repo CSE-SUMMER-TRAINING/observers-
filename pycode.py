@@ -1,4 +1,5 @@
 from multiprocessing.dummy import Manager
+from pickle import APPEND
 from re import S
 from operator import indexOf
 from sre_compile import isstring
@@ -6,20 +7,21 @@ import string
 from xmlrpc.client import DateTime
 import pandas as pd
 import arabic_reshaper
-# from bidi.algorithm import get_display
 # import xlrd     
 import openpyxl
+
 # from asyncio import taskgroups
 def arabic(str):
     return arabic_reshaper.reshape(str)[::-1]
-khalafawy=arabic("خلفاوي")
-road_el_farag=arabic("روض الفرج")
-professor=arabic("ا.د")
-Adoctor=arabic("ا.م")
-doctor=arabic("دكتور")
-manager =  arabic("رئيس لجنة")
-observer = arabic("ملاحظ")
-monitor0= arabic("مراقب دور")
+khalafawy="خلفاوي"
+road_el_farag="روض الفرج"
+professor="ا.د"
+Adoctor="ا.م"
+doctor="دكتور"
+manager =  "رئيس لجنة"
+observer = "ملاحظ"
+monitor0= "مراقب دور"
+datalist=[]
 mp = {"professor":0,professor:0,Adoctor:1,doctor:2,"Adoctor":1,"doctor":2,"other":3,"road el farag":1 ,"khalafawy":0,road_el_farag:1,khalafawy:0}
 class Task(object):
     def __init__(self,day = 0,building = 0,type = observer):
@@ -37,6 +39,9 @@ class Task(object):
 
     def task_place(self):
             return mp[self.building]
+    def work_place(self):
+            return self.building
+        
 
 class Monitor:
     def __init__(self,user_name = "unkhown", title = "employee", work_place = "college", branch = "main",max_days = 0):
@@ -46,7 +51,8 @@ class Monitor:
         self.branch = branch
         self.max_days = max_days
         self.task = []
-        self.accupied_days = {}
+        self.accupied_days = {
+        }
 
     def append_task(self,new_task):
         self.task.append(new_task)
@@ -66,6 +72,15 @@ class Monitor:
         print()
         print('#'*20)
         print()
+    def push_info(self,dt,cnt):
+        numofworkdays=0
+        for i in range(50):
+            dt[cnt].append(" ")
+            if i in self.accupied_days.keys():
+                dt[cnt].append(self.accupied_days[i][1])
+                numofworkdays+=1
+            else: dt[cnt].append(" ")
+        dt[cnt][4]=numofworkdays
         
     def Work_place(self):
         return mp[self.branch]
@@ -102,12 +117,12 @@ def process_single_task(day,tsk,monitors,lst):
 	if not monitors:return False
 
 	try:
-		if monitors[lst[0]].accupied_days[day.current_day()]:
+		if day.current_day() in monitors[lst[0]].accupied_days.keys() :
 			return False
 	except KeyError:
 		pass
 
-	monitors[lst[0]].accupied_days[day.current_day()] = 1
+	monitors[lst[0]].accupied_days[day.current_day()] = [1,tsk.work_place()]
 
 	if not monitors[lst[0]].max_days:
 		lst[1] = lst[0]
@@ -204,39 +219,58 @@ def process(monitors,days):
     return True
 
 monitors , days = [],[]
-
+#  print(arabic("بيانات المكلف"))
+#         print(f'{self.user_name.capitalize()} {arabic("الاسم: ")}')
+#         print(f'{self.title} {arabic("المسمى الوظيفى: ")}')
+#         print(f'{self.work_place} {arabic("مكان العمل: ")}')
+#         print(f'{self.branch} {arabic("المبنى: ")}')
 dataframe1 = pd.read_excel('arb.xlsx', na_values = "E",sheet_name='Sheet1')
 lst=[]
+col=["الاسم","المسمى الوظيفى","مكان العمل","المبنى","التكليف الحالي"]
+for i in range(50):
+    if(not i):
+        col.append(" ")
+        col.append(" ")
+    else:
+        col.append(f'يوم {i} وقت')
+        col.append(f'يوم {i}')
+lst.append(col)
 for index, rows in dataframe1.iterrows():
     my_list =rows.values.tolist()
-    if(not isstring(my_list[0])):continue
-    if( not (my_list[0][0]>='A' and my_list[0][0]<='z')):
-        my_list[0]= arabic_reshaper.reshape(my_list[0])[::-1]
-    if( not( my_list[1][0]>='A' and my_list[1][0]<='z')):
-        my_list[1]= arabic_reshaper.reshape(my_list[1])[::-1]
-    if( not(my_list[2][0]>='A' and my_list[2][0]<='z')):
-        my_list[2]= arabic_reshaper.reshape(my_list[2])[::-1]
-    if( not(my_list[3][0]>='A' and my_list[3][0]<='z')):
-        my_list[3]= arabic_reshaper.reshape(my_list[3])[::-1]
+    # if(not isstring(my_list[0])):continue
+    # if( not (my_list[0][0]>='A' and my_list[0][0]<='z')):
+    #     my_list[0]= arabic_reshaper.reshape(my_list[0])[::-1]
+    # if( not( my_list[1][0]>='A' and my_list[1][0]<='z')):
+    #     my_list[1]= arabic_reshaper.reshape(my_list[1])[::-1]
+    # if( not(my_list[2][0]>='A' and my_list[2][0]<='z')):
+    #     my_list[2]= arabic_reshaper.reshape(my_list[2])[::-1]
+    # if( not(my_list[3][0]>='A' and my_list[3][0]<='z')):
+    #     my_list[3]= arabic_reshaper.reshape(my_list[3])[::-1]
     lst.append(my_list)
 for x in lst:
+    if(x==lst[0]):continue
     monitors.append(Monitor(*x))
 # Day(day number , number of observres , number of monitors,number of managers) needed for that day in total
 
 day1 = Day(1,2,1,1,khalafawy)
-day2 = Day(2,55,1,1,road_el_farag)
+day2 = Day(2,5,1,1,road_el_farag)
 day3 = Day(3,4,1,1,khalafawy)
 
 days.append(day1)
 days.append(day2)
 days.append(day3)
 
+# [[n,... " ",],[],[]]
 
 ok = process(monitors, days)
-
+cnt=1
 if not ok :
 	print(arabic("عدد الموظفين غير كافى"))
-
 else:
-	for mon in monitors:
-		mon.print_info()
+    for mon in monitors:
+        mon.push_info(lst,cnt)
+        mon.print_info()
+        cnt=cnt+1
+    # print(lst)
+    dataframeout=pd.DataFrame(lst)
+    dataframeout.to_excel("observer_output.xlsx")
